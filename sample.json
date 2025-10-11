@@ -1,0 +1,18 @@
+{
+  "book": "Chronicles of the First Kingdom",
+  "chapters": {
+    "chapter": 2,
+    "verses": [
+      {
+        "verse": 1,
+        "english": "In the days of the first dawn, the people gathered by the river and built their homes of stone.",
+        "hebrew": "בִּימֵי הַשַּׁחַר הָרִאשׁוֹן, הָעָם נֶאֶסַף עַל יַד הַנָּהָר וּבָנָה בָּתִּים מֵאֶבֶן."
+      },
+      {
+        "verse": 2,
+        "english": "Their leader, Aran the Wise, taught them the laws of unity and the strength of peace.",
+        "hebrew": "מַנְהִיגָם, אָרָן הֶחָכָם, לִמֵּד אוֹתָם אֶת חוּקֵי הָאַחְדוּת וְאֶת עֹז הַשָּׁלוֹם."
+      }
+    ]
+  }
+}
