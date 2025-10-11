@@ -9,8 +9,8 @@ app = FastAPI()
 
 class Verse(BaseModel):
     verse: int
-    english: str
-    hebrew: str
+    text: str         # Original text (Malayalam/Hebrew)
+    textTran: str     # English translation
 
 class Chapters(BaseModel):
     chapter: int
