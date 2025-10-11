@@ -22,7 +22,7 @@ class Model(BaseModel):
 
 # Get the absolute path to the JSON file
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-json_path = os.path.join(BASE_DIR, "sample.json")
+json_path = os.path.join(BASE_DIR, "GEN_CH_1.json")
 
 # Load the data once on startup
 with open(json_path, "r", encoding="utf-8") as f:
