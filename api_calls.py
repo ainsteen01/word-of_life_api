@@ -51,13 +51,12 @@ def ping():
     return {"message": "pong"}
 
 # ==============================
-# Updated endpoints for your data structure
+# Fixed endpoints for your data structure
 # ==============================
 
 @app.get("/books")
 def list_books():
     """List all Bible books"""
-    # Your data has each book as a document with a "book" field
     books = collection.distinct("book")
     return {"books": sorted(books)}
 
@@ -65,76 +64,129 @@ def list_books():
 @app.get("/chapters/{book}")
 def list_chapters(book: str):
     """List all chapters for a specific book"""
-    # Find the book document
-    book_doc = collection.find_one(
+    # FIND ALL documents for this book (not just one)
+    chapters_cursor = collection.find(
         {"book": book},
         {"_id": 0, "chapters.chapter": 1}
     )
     
-    if not book_doc:
+    # Convert cursor to list
+    docs = list(chapters_cursor)
+    
+    if not docs:
         raise HTTPException(status_code=404, detail=f"Book '{book}' not found")
     
-    # Extract chapter numbers from the chapters array/object
-    if "chapters" in book_doc:
-        # Handle case where chapters might be an array or object
-        if isinstance(book_doc["chapters"], list):
-            chapters = [ch["chapter"] for ch in book_doc["chapters"]]
-        else:
-            # Single chapter object (like in your data)
-            chapters = [book_doc["chapters"]["chapter"]]
-    else:
-        chapters = []
+    # Extract chapter numbers from each document
+    chapters = []
+    for doc in docs:
+        if "chapters" in doc:
+            # Handle if chapters is an object with chapter field
+            if isinstance(doc["chapters"], dict) and "chapter" in doc["chapters"]:
+                chapters.append(doc["chapters"]["chapter"])
+            # Handle if chapters is an array
+            elif isinstance(doc["chapters"], list):
+                for ch in doc["chapters"]:
+                    if isinstance(ch, dict) and "chapter" in ch:
+                        chapters.append(ch["chapter"])
     
-    return {"book": book, "chapters": sorted(chapters)}
+    # Remove duplicates (just in case) and sort
+    chapters = sorted(list(set(chapters)))
+    
+    return {
+        "book": book, 
+        "chapters": chapters,
+        "total_chapters": len(chapters)
+    }
 
 
 @app.get("/chapter/{book}/{chapter_num}")
 def get_chapter(book: str, chapter_num: int):
     """Get a specific chapter with all verses"""
-    # Find the book document
-    book_doc = collection.find_one(
-        {"book": book},
+    # Find the document that contains this specific chapter
+    # This works when each document is one chapter
+    doc = collection.find_one(
+        {
+            "book": book,
+            "chapters.chapter": chapter_num
+        },
         {"_id": 0}
     )
     
-    if not book_doc:
-        raise HTTPException(status_code=404, detail=f"Book '{book}' not found")
-    
-    # Check if chapters exists and is the right format
-    if "chapters" not in book_doc:
-        raise HTTPException(status_code=404, detail="No chapters found in this book")
-    
-    # Handle different possible structures
-    chapter_data = None
-    
-    if isinstance(book_doc["chapters"], list):
-        # If chapters is an array of chapter objects
-        for ch in book_doc["chapters"]:
-            if ch.get("chapter") == chapter_num:
-                chapter_data = ch
-                break
-    else:
-        # If chapters is a single object (like your Genesis data)
-        if book_doc["chapters"].get("chapter") == chapter_num:
-            chapter_data = book_doc["chapters"]
-    
-    if not chapter_data:
+    if not doc:
+        # Try alternative structure if above fails
+        doc = collection.find_one(
+            {"book": book},
+            {"_id": 0}
+        )
+        if doc and "chapters" in doc:
+            if isinstance(doc["chapters"], list):
+                for ch in doc["chapters"]:
+                    if ch.get("chapter") == chapter_num:
+                        return {
+                            "book": book,
+                            "chapter": chapter_num,
+                            "verses": ch.get("verses", [])
+                        }
+        
         raise HTTPException(status_code=404, detail=f"Chapter {chapter_num} not found in {book}")
     
-    # Return the chapter with book name included for clarity
+    # Extract the chapter data
+    if "chapters" in doc:
+        if isinstance(doc["chapters"], dict):
+            # Each document contains one chapter
+            return {
+                "book": book,
+                "chapter": doc["chapters"].get("chapter"),
+                "verses": doc["chapters"].get("verses", [])
+            }
+        elif isinstance(doc["chapters"], list):
+            for ch in doc["chapters"]:
+                if ch.get("chapter") == chapter_num:
+                    return {
+                        "book": book,
+                        "chapter": chapter_num,
+                        "verses": ch.get("verses", [])
+                    }
+    
+    # Fallback: return the whole document
     return {
         "book": book,
         "chapter": chapter_num,
-        "verses": chapter_data.get("verses", [])
+        "data": doc
     }
 
 
-# Optional: Debug endpoint to check structure
+# Debug endpoint to check structure
 @app.get("/debug/books")
 def debug_books():
     """Debug endpoint to see book structures"""
-    books = collection.find({}, {"_id": 0, "book": 1, "chapters.chapter": 1}).limit(5)
+    books = collection.find({}, {"_id": 0, "book": 1, "chapters.chapter": 1}).limit(10)
     result = []
     for book in books:
         result.append(book)
-    return {"sample_books": result}
+    return {
+        "total_documents": len(result),
+        "sample_books": result
+    }
+
+
+# New debug endpoint specifically for Genesis
+@app.get("/debug/genesis")
+def debug_genesis():
+    """Debug endpoint to see all Genesis documents"""
+    docs = list(collection.find(
+        {"book": "Genesis"},
+        {"_id": 0, "book": 1, "chapters.chapter": 1}
+    ))
+    
+    chapters = []
+    for doc in docs:
+        if "chapters" in doc and isinstance(doc["chapters"], dict):
+            chapters.append(doc["chapters"].get("chapter"))
+    
+    return {
+        "book": "Genesis",
+        "documents_found": len(docs),
+        "chapters_found": sorted(chapters),
+        "raw_docs": docs
+    }
