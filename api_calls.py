@@ -25,7 +25,26 @@ collection = db["verses"]
 # ==============================
 # FastAPI app
 # ==============================
-app = FastAPI()
+app = FastAPI(title="Bible API", description="Access Bible verses and chapters")
+
+# ==============================
+# Root endpoint (ADD THIS!)
+# ==============================
+@app.get("/")
+async def root():
+    return {
+        "message": "📖 Bible API is running!",
+        "documentation": "/docs",
+        "alternative_docs": "/redoc",
+        "available_endpoints": {
+            "GET /ping": "Check if API is alive",
+            "GET /books": "List all Bible books",
+            "GET /chapters/{book}": "List chapters for a book (e.g., /chapters/John)",
+            "GET /chapter/{book}/{chapter_num}": "Get a specific chapter (e.g., /chapter/John/3)",
+            "GET /docs": "Interactive API documentation (Swagger UI)",
+            "GET /redoc": "Alternative API documentation"
+        }
+    }
 
 # ==============================
 # Data models (optional, for docs)
